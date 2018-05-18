@@ -1,0 +1,138 @@
+﻿cross compiler:
+gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux.tar.xz
+from 
+https://releases.linaro.org/14.04/components/toolchain/binaries/
+
+
+extract and export path somewhere
+export PATH=$PATH:PATH-TO-CROSS-COMPILER-arm-linux-gnueabihf
+
+
+Cloning uboot-
+===============
+wget http://dev.gentoo.org/~armin76/arm/beaglebone/mkcard.sh //now it is not able to fetch 31dec16
+chmod +x mkcard.sh
+sudo ./mkcard.sh /dev/sdb
+
+
+git clone git://git.denx.de/u-boot.git && cd u-boot
+make am335x_boneblack_defconfig
+ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- make
+
+
+copy MLO first
+then uboot.img
+
+
+Cloning the Kernel-
+===================
+git clone https://github.com/beagleboard/linux.git
+cd kernel
+git checkout 3.8
+./patch.sh
+
+Compiling kernel-
+------------------
+sudo make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bb.org_defconfig //bb.org defconfig is in 4.4 kernel, in 3.8 it is names as beaglebone_defconfig
+sudo make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4
+
+
+compile kernel modules(need to check)-
+--------------------------------------
+sudo make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j4
+sudo make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=/media/nikhil/rootfs/ modules_install
+
+
+uEnv.txt-
+==========
+console=ttyS0,115200n8
+netargs=setenv bootargs console=ttyO0,115200n8 root=/dev/mmcblk0p2 ro rootfstype=ext4 rootwait debug earlyprintk mem=256M
+netboot=echo Booting from Network ...; setenv autoload no ; load mmc 0:1 ${loadaddr} uImage ; load mmc 0:1 ${fdtaddr} am335x-boneblack.dtb ; run netargs ; bootm ${loadaddr} - ${fdtaddr}
+uenvcmd=run netboot
+
+
+
+
+Last-
+=======
+from Uboot copy MLO , uboot.img, from kernel, copy uImage and dtb/am335x-boneblack.dtb
+to boot partition
+copy rootfs to rootfs partition
+
+
+boot using holding user (S2) button
+
+========
+errors
+
+A.fstack-protector, disable 
+scripts/config --disable CC_STACKPROTECTOR_STRONG
+
+
+https://github.com/beagleboard/linux
+
+B.make[2]: *** No rule to make target `fs/btrfs/volumes.o', needed by `fs/btrfs/btrfs.o'.  Stop.
+make[2]: *** Waiting for unfinished jobs....
+
+No volumes.c file there in fs/btrfs folder. In makefile btrfs.o needs it. Needed to copy the source files from beaglebone/linux4.4 github and put it there.
+
+C.
+../scsi/scsi_transport_api.h: No such file or directory
+copied and put.
+
+block/partitions/Makefile: File name too long
+It was a symbolic link instead of file, copied and put.
+
+D.
+drivers/hid/hid-core.c:fatal error: linux/hid-debug.h: No such file or directory
+copied hid-debug.h at include/linux
+
+E.
+No rule to make target `drivers/mtd/nand/nand_base.o', needed by `drivers/mtd/nand/nand.o'.  Stop.
+copied nand_base.o at drivers/mtd/nand/
+
+F.
+/bin/sh: 1: lzop: not found
+sudo apt-get install lzop
+
+G.
+mkimage" command not found - U-Boot images will not be built
+E: Package 'uboot-mkimage' has no installation candidate
+
+sudo apt-get install u-boot-tools (not uboot-mkimage)\
+
+then build modules. Again some files were missing that I copied.
+
+Once Done:
+==========
+Connections on BBB
+p9_19 = GPIO_13 = I2C2_SCL
+pn_20 = GPIO_12 = I2C2_SDA
+
+for more check the gmail, blog where I have put useful and better steps.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
